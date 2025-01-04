@@ -1,31 +1,33 @@
 name: Deploy to AWS
 
-# トリガー条件
-# このワークフローは、mainブランチにマージ(変更がプッシュ)されたときに実行されます。
 on:
   push:
     branches:
       - main
 
-# 環境変数の設定
 env:
   AWS_REGION: ap-northeast-1
   ECR_REPOSITORY: my-image
 
-# ジョブの構成
 jobs:
   deploy:
     name: Deploy
     runs-on: ubuntu-latest
 
     steps:
-      # リポジトリのチェックアウト
-      # actions/checkoutを使用して、GitHubリポジトリの内容をクローン。
       - name: Checkout
         uses: actions/checkout@v4
 
-      # AWS認証情報の設定
-      # aws-actions/configure-aws-credentialsを使用して、GitHubのシークレットに保存したAWSアクセスキーとシークレットキーを用いて認証。
+      - name: Set up JDK
+        uses: actions/setup-java@v3
+        with:
+          distribution: temurin
+          java-version: 21
+
+      # Gradle ビルド
+      - name: Build with Gradle
+        run: ./gradlew clean build -x test
+
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v1
         with:
@@ -33,15 +35,10 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
 
-      # ECRへのログイン
-      # aws-actions/amazon-ecr-loginを使用して、Amazon ECRにログイン。
-      # (このステップで取得したレジストリ情報は後続のステップで使用されます)
       - name: Login to Amazon ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v1
 
-      # Dockerイメージのビルドとプッシュ
-      # docker buildコマンドでDockerイメージをビルドし、ECRリポジトリにプッシュ。
       - name: Build, tag, and push image to Amazon ECR
         id: build-image
         env:
