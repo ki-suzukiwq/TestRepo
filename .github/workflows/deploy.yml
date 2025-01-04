@@ -1,36 +1,35 @@
-name: Build and Push to Amazon ECR
-
-on:
-  push:
-    branches:
-      - main  # メインブランチにプッシュされたときにトリガー
-
-
-jobs:
-  build-and-push:
-    runs-on: ubuntu-latest
-
-    steps:
-      # ソースコードをチェックアウト
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      # Amazon ECR にログイン
-      - name: Log in to Amazon ECR
-        uses: aws-actions/amazon-ecr-login@v1
-
-      # Docker イメージをビルドして Amazon ECR にプッシュ
-      - name: Build and Push Docker Image
-        env:
-          ECR_REGISTRY: 669505788985.dkr.ecr.ap-northeast-1.amazonaws.com  # AWS アカウント ID とリージョン
-          ECR_REPOSITORY: my-image  # ECR に作成したリポジトリ名
-          IMAGE_TAG: latest  # イメージのタグ（例: latest）
-        run: |
-          # Docker イメージをビルド
-          docker build -t $ECR_REPOSITORY:$IMAGE_TAG .
-          
-          # イメージをリポジトリのフルパスにタグ付け
-          docker tag $ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
-          
-          # イメージを ECR にプッシュ
-          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
++ name: Deploy to AWS
++ 
++ # トリガー条件
++ # このワークフローは、mainブランチにマージ(変更がプッシュ)されたときに実行されます。
++ on:
++   push:
++     branches: ["main"]
++ 
++ # 環境変数の設定
++ # 必要な情報を環境変数として指定。
++ # (ハンズオンでは、AWSリージョン、リポジトリ名、クラスター、サービス名、タスク定義ファイル名などの順次追加していきます)
++ env:
++   AWS_REGION: ap-northeast-1
++ 
++ # ジョブの構成
++ # deployという名前のジョブを設定し、Ubuntu環境でGitHub Actionsを実行します。
++ jobs:
++   deploy:
++     name: deploy
++     runs-on: ubuntu-latest
++ 
++     steps:
++       # AWS認証情報の設定
++       # aws-actions/configure-aws-credentialsを使用して、Githubのシークレットに保存したAWSアクセスキーとシークレットキーを用いて認証。
++       - name: Configure AWS credentials
++         uses: aws-actions/configure-aws-credentials@v1
++         with:
++           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
++           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
++           aws-region: ${{ env.AWS_REGION }}
++ 
++       # IAMユーザー情報の取得
++       # aws iam get-userコマンドを使用して、現在使用しているAWS認証情報に紐付けられたIAMユーザーの詳細を取得します。
++       - name: execute AWS CLI
++         run: aws iam get-user
