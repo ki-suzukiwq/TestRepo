@@ -67,9 +67,9 @@ jobs:
         id: task-def
         uses: aws-actions/amazon-ecs-render-task-definition@v1
         with:
-          task-definition: ${{ env.ECS_TASK_DEFINITION }}
-          container-name: ${{ env.CONTAINER_NAME }}
-          image: ${{ steps.build-image.outputs.image }}
+          task-definition: arn:aws:ecs:ap-northeast-1:669505788985:task-definition/dev-task-definition-go-api-sample-todo:7
+          container-name: go-api-sample-todo 
+          image: my-image
 
       # デプロイの実行
       # aws-actions/amazon-ecs-deploy-task-definitionを使用して、更新されたタスク定義を実行しECSにデプロイ。
@@ -77,8 +77,8 @@ jobs:
       - name: Deploy Amazon ECS task definition
         uses: aws-actions/amazon-ecs-deploy-task-definition@v1
         with:
-          task-definition: ${{ steps.task-def.outputs.task-definition }}
-          service: ${{ env.ECS_SERVICE }}
-          cluster: ${{ env.ECS_CLUSTER }}
+          task-definition: arn:aws:ecs:ap-northeast-1:669505788985:task-definition/dev-task-definition-go-api-sample-todo:7
+          service: dev-ecs-service-go-api-sample-todo
+          cluster: dev-ecs-cluster-go-api-sample-todo
           wait-for-service-stability: false
           force-new-deployment: true
