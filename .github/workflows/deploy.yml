@@ -3,7 +3,7 @@ name: Deploy to AWS
 on:
   push:
     branches:
-      - main
+      - main #mainへのPUSHをトリガにGitワークフローが動作
 
 env:
   AWS_REGION: ap-northeast-1
@@ -12,13 +12,20 @@ env:
 jobs:
   deploy:
     name: Deploy
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest #このジョブを実行する仮想環境を指定
 
     steps:
-      - name: Checkout
+      - name: Checkout #GitHub リポジトリの内容をチェックアウト（クローン）
         uses: actions/checkout@v4
 
-      - name: Set up JDK
+        #GitHub Actions ワークフロー内で Java 環境をセットアップするステップ
+        #この環境設定は、後続のビルドやテストプロセスで Java を使用するために必要
+        #Java Development Kit (JDK) をセットアップし、特定のバージョンをインストールするために利用
+        #@v3 はアクションのバージョン
+        #with:このアクションに渡すパラメータを指定
+        #temurin は Adoptium プロジェクトが提供する OpenJDK のディストリビューション
+        #Temurin は以前の AdoptOpenJDK プロジェクトの後継
+      - name: Set up JDK 
         uses: actions/setup-java@v3
         with:
           distribution: temurin
@@ -26,9 +33,9 @@ jobs:
 
       # Gradle ビルド
       - name: Build with Gradle
-        run: ./gradlew clean build -x test
+        run: ./gradlew clean build -x test # テスト工程はスキップ。テストでこけるとどうなる？
 
-      - name: Configure AWS credentials
+      - name: Configure AWS credentials #AWSログインのための情報を取得。Git TestのAWSクレデンシャル情報
         uses: aws-actions/configure-aws-credentials@v1
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
@@ -37,12 +44,41 @@ jobs:
 
       - name: Login to Amazon ECR
         id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v1
+        uses: aws-actions/amazon-ecr-login@v1 #AWS ECR にログインする公式アクション
 
-      - name: Build, tag, and push image to Amazon ECR
+        #${{ steps.login-ecr.outputs.registry }} は、前のステップ（Login to Amazon ECR）で Amazon ECR にログインした際に、
+        #aws-actions/amazon-ecr-login アクションが出力した registry の値を参照
+      - name: Build, tag, and push image to Amazon ECR #Docker イメージをビルドし、ECR にプッシュ
         id: build-image
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          #キャッシュを使用せずに新たにビルド。
+          #-t: イメージ名を指定（例: <ECR レジストリ>/<リポジトリ名>:latest）　タグ付け
+          #ビルドしたイメージを ECR にプッシュ。
         run: |
-          docker build --no-cache -t $ECR_REGISTRY/$ECR_REPOSITORY:latest .
+          docker build --no-cache -t $ECR_REGISTRY/$ECR_REPOSITORY:latest .  
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
+
+
+ # タスク定義の更新
+      # aws-actions/amazon-ecs-render-task-definitionを使用して、新しいDockerイメージを指定したタスク定義ファイルを更新。
+      # これにより、ECSサービスにデプロイされるコンテナが最新のイメージを使用するようになります。
+#      - name: Fill in the new image ID in the Amazon ECS task definition
+#        id: task-def
+#        uses: aws-actions/amazon-ecs-render-task-definition@v1
+#        with:
+#          task-definition: ${{ env.ECS_TASK_DEFINITION }}
+#          container-name: ${{ env.CONTAINER_NAME }}
+#          image: ${{ steps.build-image.outputs.image }}
+
+      # デプロイの実行
+      # aws-actions/amazon-ecs-deploy-task-definitionを使用して、更新されたタスク定義を実行しECSにデプロイ。
+      # この際、強制的に新しいデプロイを開始する設定を有効にしています。
+#      - name: Deploy Amazon ECS task definition
+#        uses: aws-actions/amazon-ecs-deploy-task-definition@v1
+#        with:
+#          task-definition: ${{ steps.task-def.outputs.task-definition }}
+#          service: ${{ env.ECS_SERVICE }}
+#          cluster: ${{ env.ECS_CLUSTER }}
+#          wait-for-service-stability: false
+#          force-new-deployment: true
