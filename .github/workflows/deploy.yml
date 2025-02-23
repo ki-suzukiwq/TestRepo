@@ -67,7 +67,7 @@ jobs:
         id: task-def
         uses: aws-actions/amazon-ecs-render-task-definition@v1
         with:
-          task-definition-arn: arn:aws:ecs:ap-northeast-1:669505788985:task-definition/dev-task-definition-go-api-sample-todo:7
+          task-definition: task-definition.json
           container-name: go-api-sample-todo 
           image: my-image
 
@@ -77,7 +77,7 @@ jobs:
       - name: Deploy Amazon ECS task definition
         uses: aws-actions/amazon-ecs-deploy-task-definition@v1
         with:
-          task-definition-arn: arn:aws:ecs:ap-northeast-1:669505788985:task-definition/dev-task-definition-go-api-sample-todo:7
+          task-definition: task-definition.json 
           service: dev-ecs-service-go-api-sample-todo
           cluster: dev-ecs-cluster-go-api-sample-todo
           wait-for-service-stability: false
